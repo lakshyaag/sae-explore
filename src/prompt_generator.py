@@ -20,15 +20,16 @@ def get_prompt_template(topic: str) -> List[Dict[str, str]]:
 def generate_prompt(
     goodfire_client: goodfire.Client,
     variant: goodfire.Variant,
-    feature: goodfire.Feature,
+    features: List[goodfire.Feature],
     prompt: List[Dict[str, str]],
     strength: float,
 ) -> str:
     """Generate a single prompt with the given feature strength."""
     logger.info(
-        f"Prompt: {prompt[0]['content']} | Feature: {feature} | Strength: {strength}"
+        f"Prompt: {prompt[0]['content']} | Features: {features} | Strength: {strength}"
     )
-    variant.set(feature, strength)
+    for feature in features:
+        variant.set(feature, strength)
 
     response = goodfire_client.chat.completions.create(
         messages=prompt,

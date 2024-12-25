@@ -37,8 +37,8 @@ class StorageManager:
         image = Image.open(response.raw)
 
         # Create storage path
-        storage_path = f"{concept}/{feature_id}_{feature_strength}.png"
-        os.makedirs(f"images/{concept}", exist_ok=True)
+        storage_path = f"{concept_id}/{feature_id}_{feature_strength}.png"
+        os.makedirs(f"images/{concept_id}", exist_ok=True)
         image.save(f"images/{storage_path}")
 
         # Upload to storage

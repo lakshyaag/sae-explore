@@ -39,15 +39,17 @@ def generate_and_save(
     feature_manager: FeatureManager,
     storage_manager: StorageManager,
     concept: str,
-    feature_input: str,
+    feature: str,
     strength: float,
     progress: Progress,
-    feature_index: int = 0,
+    num_features: int = 1,
 ) -> UUID:
     """Generate a prompt and image, then save both."""
     # Get or create feature
     task = progress.add_task("Finding/creating feature...", total=None)
-    feature_id, feature, variant = feature_manager.find_or_create_feature(feature_input)
+    feature_id, features, variant = feature_manager.find_or_create_feature(
+        feature, num_features
+    )
     progress.remove_task(task)
 
     # Get all discovered features
@@ -57,8 +59,9 @@ def generate_and_save(
     # Generate prompt
     task = progress.add_task("Generating prompt...", total=None)
     prompt_template = get_prompt_template(concept)
+
     generated_prompt = generate_prompt(
-        goodfire_client, variant, feature, prompt_template, strength
+        goodfire_client, variant, features, prompt_template, strength
     )
     progress.remove_task(task)
     logger.debug(f"Generated prompt: {generated_prompt}")
@@ -78,7 +81,7 @@ def generate_and_save(
     generation_id = storage_manager.save_concept_and_generation(
         concept=concept,
         feature_id=feature_id,
-        feature_index=feature_index,
+        feature_index=len(features) - 1,  # Use the last feature's index
         feature_strength=strength,
         generated_prompt=generated_prompt,
         image_url=image_url,
@@ -101,19 +104,19 @@ def generate(
     max_strength: float = typer.Option(
         0.5, "--max-strength", help="Maximum feature strength"
     ),
-    feature_index: int = typer.Option(
-        0, "--feature-index", "-i", help="Index of the feature to use (0-4)"
+    num_features: int = typer.Option(
+        1, "--num-features", "-f", help="Number of top features to apply (1-5)"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
     ),
 ) -> None:
     """Generate images for a concept with varying feature strengths."""
-    if not -0.5 <= min_strength <= max_strength <= 0.5:
-        raise typer.BadParameter("Strength must be between -0.5 and 0.5")
+    if not -1 <= min_strength <= max_strength <= 1:
+        raise typer.BadParameter("Strength must be between -1 and 1")
 
-    if not 0 <= feature_index <= 4:
-        raise typer.BadParameter("Feature index must be between 0 and 4")
+    if not 1 <= num_features <= 5:
+        raise typer.BadParameter("Number of features must be between 1 and 5")
 
     # Load configuration
     config = load_config()
@@ -153,7 +156,7 @@ def generate(
                 feature,
                 float(strength),
                 progress,
-                feature_index,
+                num_features,
             )
             if verbose:
                 console.print(

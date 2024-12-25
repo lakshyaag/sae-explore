@@ -6,6 +6,8 @@ from typing import List, Tuple
 from uuid import UUID
 import pandas as pd
 
+st.set_page_config(layout="wide", page_title="SAE Explorer")
+
 # Load environment variables
 load_dotenv()
 
@@ -21,19 +23,23 @@ def get_concepts() -> List[Tuple[UUID, str]]:
     return [(row["id"], row["text"]) for row in result.data]
 
 
-def get_features_for_concept(concept_id: UUID) -> List[Tuple[UUID, str]]:
+def get_features_for_concept(concept_id: UUID) -> List[Tuple[UUID, str, List[str]]]:
     """Get all features used with a concept."""
     result = (
         supabase.table("generations")
-        .select("features(id, input_text)")
+        .select("features(id, input_text, discovered_features)")
         .eq("concept_id", concept_id)
         .execute()
     )
-    # Get unique features
+    # Get unique features with their discovered features
     features = {
-        row["features"]["id"]: row["features"]["input_text"] for row in result.data
+        row["features"]["id"]: (
+            row["features"]["input_text"],
+            row["features"]["discovered_features"],
+        )
+        for row in result.data
     }
-    return list(features.items())
+    return [(id, text, disc) for id, (text, disc) in features.items()]
 
 
 def get_generations(concept_id: UUID, feature_id: UUID) -> pd.DataFrame:
@@ -53,27 +59,26 @@ def get_generations(concept_id: UUID, feature_id: UUID) -> pd.DataFrame:
 st.title("AI Generated Concepts Explorer")
 
 # Sidebar for concept and feature selection
-with st.sidebar:
-    st.header("Controls")
 
-    # Get and display concepts
-    concepts = get_concepts()
-    selected_concept_id = st.selectbox(
-        "Select Concept",
-        options=[c[0] for c in concepts],
-        format_func=lambda x: next(c[1] for c in concepts if c[0] == x),
-        key="concept",
+# Get and display concepts
+concepts = get_concepts()
+selected_concept_id = st.selectbox(
+    "Select Concept",
+    options=[c[0] for c in concepts],
+    format_func=lambda x: next(c[1] for c in concepts if c[0] == x),
+    key="concept",
+)
+
+if selected_concept_id:
+    # Get and display features for selected concept
+    features = get_features_for_concept(selected_concept_id)
+    selected_feature_id = st.selectbox(
+        "Select Feature Input",
+        options=[f[0] for f in features],
+        format_func=lambda x: next(f[1] for f in features if f[0] == x),
+        key="feature",
     )
 
-    if selected_concept_id:
-        # Get and display features for selected concept
-        features = get_features_for_concept(selected_concept_id)
-        selected_feature_id = st.selectbox(
-            "Select Feature",
-            options=[f[0] for f in features],
-            format_func=lambda x: next(f[1] for f in features if f[0] == x),
-            key="feature",
-        )
 
 # Main content area
 if selected_concept_id and selected_feature_id:
@@ -81,6 +86,9 @@ if selected_concept_id and selected_feature_id:
     generations_df = get_generations(selected_concept_id, selected_feature_id)
 
     if not generations_df.empty:
+        # Filter generations by number of features used
+        # generations_df = generations_df[generations_df["feature_index"] < num_features]
+
         # Create strength slider
         min_strength = float(generations_df["feature_strength"].min())
         max_strength = float(generations_df["feature_strength"].max())
@@ -108,6 +116,7 @@ if selected_concept_id and selected_feature_id:
             )
 
         with col2:
+            num_features = closest_generation["feature_index"] + 1
             st.text_area(
                 "Generated Prompt",
                 closest_generation["generated_prompt"],
@@ -117,7 +126,15 @@ if selected_concept_id and selected_feature_id:
 
             # Add metadata
             st.markdown("### Metadata")
-            st.write(f"Feature Index: {closest_generation['feature_index']}")
+            discovered_features = next(
+                f[2] for f in features if f[0] == selected_feature_id
+            )
+
+            # Display selected features
+            st.markdown("### Selected Features")
+            for i, feature in enumerate(discovered_features[:num_features]):
+                st.text(f"{i+1}. {feature['label']}")
+
             st.write(f"Generation ID: {closest_generation['id']}")
             st.write(f"Created: {closest_generation['created_at']}")
     else:
