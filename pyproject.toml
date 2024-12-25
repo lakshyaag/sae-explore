@@ -7,7 +7,13 @@ requires-python = ">=3.12"
 dependencies = [
     "fal-client>=0.5.6",
     "goodfire>=0.3.3",
+    "numpy>=2.2.1",
+    "pillow>=11.0.0",
+    "requests>=2.32.3",
     "supabase>=2.10.0",
+    "typer>=0.15.1",
+    "streamlit>=1.32.0",
+    "pandas>=2.2.1",
 ]
 
 [tool.uv]
