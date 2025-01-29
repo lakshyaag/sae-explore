@@ -144,6 +144,7 @@ else:
 
 # Footer
 st.markdown("---")
+st.markdown("[X (@lakshyaag)](https://x.com/lakshyaag)")
 st.markdown(
     "Built with Streamlit • Data from Supabase • "
     "Images generated with Fal.ai • Features by Goodfire"
