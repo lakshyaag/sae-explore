@@ -120,7 +120,7 @@ def generate(
 
     # Load configuration
     config = load_config()
-    setup_logging("DEBUG" if verbose else "WARNING")
+    setup_logging("INFO" if verbose else "WARNING")
 
     # Initialize clients
     goodfire_client = init_goodfire(config)

@@ -11,8 +11,9 @@ def get_prompt_template(topic: str) -> List[Dict[str, str]]:
     return [
         {
             "role": "user",
-            "content": dedent(f"""Design a prompt for the following: "{topic}"
-        Do not generate anything else."""),
+            "content": dedent(
+                f"""Design a prompt for the following: "{topic}". Do not generate anything else."""
+            ),
         }
     ]
 
